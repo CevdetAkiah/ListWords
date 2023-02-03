@@ -10,15 +10,12 @@ import (
 )
 
 // begin splits the work between goroutines and initialises
-func begin(filename string, length int) {
+func begin(done chan interface{}, filename string, length int) {
 	wordFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	done := make(chan interface{})
-	defer close(done)
 
 	numFinders := runtime.NumCPU() // number of goroutines we can create
 

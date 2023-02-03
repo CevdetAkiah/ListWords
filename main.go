@@ -5,6 +5,9 @@ import (
 )
 
 func main() {
+	done := make(chan interface{})
+	defer close(done)
+
 	reader := os.Stdin
-	ui(reader)
+	ui(done, reader)
 }
