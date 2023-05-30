@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 // begin splits the work between goroutines and initialises
@@ -28,6 +29,9 @@ func begin(done chan interface{}, filename string, length int) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	var wg sync.WaitGroup
+
 	// fan out
 	for startPoint := 0; startPoint < len(wordFile); startPoint += split {
 		for j := startPoint; ; j++ {
@@ -36,12 +40,17 @@ func begin(done chan interface{}, filename string, length int) {
 			}
 			startPoint++ // Don't want to cut the slice half way through a word so find a space
 		}
-		parseWords(done, wordFile, startPoint, length, writeTo) // send a goroutine to write the given number of bytes to a file in string form
+		wg.Add(1)
+		parseWords(&wg, done, wordFile, startPoint, length, writeTo) // send a goroutine to write the given number of bytes to a file in string form
 	}
+
+	wg.Wait() // Wait until all goroutines have completed
 }
 
 // parseWords concurrently parses the file given and returns a slice of words of the given length
-func parseWords(done <-chan interface{}, values []byte, startPoint int, length int, file *os.File) {
+func parseWords(wg *sync.WaitGroup, done <-chan interface{}, values []byte, startPoint int, length int, file *os.File) {
+	defer wg.Done()
+
 	wordStream := make(chan []string)
 	go func() {
 		defer close(wordStream)
@@ -56,6 +65,7 @@ func parseWords(done <-chan interface{}, values []byte, startPoint int, length i
 		}
 
 		var wordSlice []string
+
 		// add a word at each whitespace
 		spaceCount := 0
 		for i := startPoint; i < endPoint; i++ {
